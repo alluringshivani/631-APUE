@@ -17,7 +17,6 @@
  This program demonstrates how the copy command works in NETBSD environment. 
  */
 
-
 int main(int argc,char* argv[]) {
   FILE *file1,*file2;
   struct stat buf;
