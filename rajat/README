@@ -1,4 +1,4 @@
-7 test cases are failing out of 25
+6 test cases are failing out of 26
 
 localhost$ sh testcp.sh -p bbcp
 Expected failure, but command returned 0:
