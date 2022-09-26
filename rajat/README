@@ -1,1 +1,19 @@
+6 test cases are failing out of 25
+
+localhost$ sh testcp.sh -p bbcp
+Expected failure, but command returned 0:
+  xpected failure, but command returned 0:
+  /home/rajat/Desktop/rajat/bbcp file file2
+Files '/etc/passwd' and 'file' differ.
+Expected success, but command failed:
+  /home/rajat/Desktop/rajat/bbcp /etc/passwd .
+Expected success, but command failed:
+  /home/rajat/Desktop/rajat/bbcp g ./sub/dir/.
+Expected success, but command failed:
+  /home/rajat/Desktop/rajat/bbcp /etc/passwd ./sub/dir/.
+Expected success, but command failed:
+  /home/rajat/Desktop/rajat/bbcp /etc/passwd ../cptest.jtzIYw/
+testcp.sh: 6/26 tests failed.
+
+I noticed that if i make use of open() instead of fopen() then I would get more test cases unlocked and this is something I want to clear my doubts with.
 
