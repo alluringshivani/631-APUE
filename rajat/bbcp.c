@@ -25,7 +25,7 @@ int main(int argc,char* argv[]) {
   file2=fopen(argv[2],"w");
 
     if(argc!=3) {
-      fprintf(stderr, "Please specify source-file target-file\n");
+      fprintf(stderr, "Usage: %s <SOURCE> <DESTINATION> \n",argv[0]);
       exit(1);
     }
 
