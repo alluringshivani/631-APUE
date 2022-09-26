@@ -1,5 +1,5 @@
-CC=gcc
+CC=cc
+CFLAGS=-Wall -Werror -Wextra
+
 bbcp: bbcp.c
-	$(CC) bbcp.c -o bbcp -ansi -g -Wall -Werror -Wextra -Wformat=2 -Wjump-misses-init -Wlogical-op -Wpedantic -Wshadow
-clean:
-	rm bbcp
+	$(CC) $(CFLAGS) -o bbcp bbcp.c
