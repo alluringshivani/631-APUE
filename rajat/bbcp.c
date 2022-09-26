@@ -1,7 +1,5 @@
 /*
  * Homework-1 - bbcp.c - bare-bones copy a file
- * Author: Rajat Rajesh Shetty
- * Email: rshett2@stevens.edu
 */
 
 #include <stdio.h>
@@ -15,19 +13,16 @@
 
 #define BUFFERSIZE 16384
 
+/*
+ This program demonstrates how the copy command works in NETBSD environment. 
+ */
+
 
 int main(int argc,char* argv[]) {
   FILE *file1,*file2;
-  struct stat buf,secondDirectory;
-  char buffer[BUFFERSIZE];
-  int n,writeDescriptor,filedesc;
+  struct stat buf;
   file1=fopen(argv[1],"r");
   file2=fopen(argv[2],"w");
-  if (access(argv[1], R_OK) != 0) {
-		fprintf(stderr, "%s is not readable (access denied)\n", argv[1]);
-		exit(1);
-	}
-   stat(argv[1],&buf);
 
     if(argc!=3) {
       fprintf(stderr, "Please specify source-file target-file\n");
@@ -38,6 +33,12 @@ int main(int argc,char* argv[]) {
 		fprintf(stderr, "both files entered are the same\n");
 		exit(1);
 	  }
+
+  if (access(argv[1], R_OK) != 0) {
+		fprintf(stderr, "%s is not readable (access denied)\n", argv[1]);
+		exit(1);
+	}
+   stat(argv[1],&buf);	  
 
     if(S_ISDIR(buf.st_mode)){     /* IS_DIR is a function that checks if the file is a directory or not*/
         printf("Source is a directory\n");
