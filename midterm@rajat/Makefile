@@ -1,5 +1,5 @@
-ls: ls.c
-	gcc -Wall -pedantic -o ls ls.c
+ls: l.c
+	gcc -Wall -pedantic -o ls l.c
 
 .PHONY: clean
 clean:
