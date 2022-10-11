@@ -1,77 +1,180 @@
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#include <dirent.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <limits.h> 
+#include <errno.h>
+#include <string.h> 
+#include <sys/stat.h>
+#include <pwd.h>
+#include <time.h>
+#include <libgen.h>
+#include <sys/types.h>
+#include <grp.h>
 
-char *
-getType(const struct stat sb) {
-	if (S_ISREG(sb.st_mode))
-		return "regular file";
-	else if (S_ISDIR(sb.st_mode))
-		return "directory";
-	else if (S_ISCHR(sb.st_mode))
-		return "character special";
-	else if (S_ISBLK(sb.st_mode))
-		return "block special";
-	else if (S_ISFIFO(sb.st_mode))
-		return "FIFO";
-	else if (S_ISLNK(sb.st_mode))
-		return "symbolic link";
-	else if (S_ISSOCK(sb.st_mode))
-		return "socket";
-	else
-		return "unknown";
+void print_long(char *dir_arg, struct dirent *dir_entry); 
+void flag_handler(char *dir_arg, struct dirent *dir_entry, int flag_all, int flag_long);
+void print_args(char *dir_arg, char *file, int flag_all, int flag_long, int flag_file); 
+
+//main function    
+int main(int argc, char *argv[]) {
+    //initialize flags
+    int flag_long = 0; 
+    int flag_all = 0; 
+    int flag_file = 0; 
+
+    //get options 
+    int opt; 
+    while((opt = getopt(argc, argv, "al")) != -1) {
+        switch (opt) {
+        case 'l':   
+            flag_long = 1; 
+            break;
+        case 'a':
+            flag_all = 1; 
+            break;
+        default:
+            fprintf(stderr, "myls: supports -l and -a options\n"); 
+            exit(EXIT_FAILURE); 
+        }
+    }
+
+    //check command line args and call print_args with appropriate parameters 
+    if(optind == argc) {
+        print_args(".", "NULL", flag_all, flag_long, flag_file);
+        if(flag_long == 0) {
+            printf("\n");
+        }
+    }else{
+        while(optind < argc) {
+            struct stat argbuf;
+            char *arg = argv[optind]; 
+            if((stat(arg, &argbuf)) == -1) {
+                printf("myls: cannot access '%s': No such file or directory\n", argv[optind]);
+            }else{
+                if(S_ISREG(argbuf.st_mode)) {
+                    flag_file = 1;
+                    print_args(".", arg, flag_all, flag_long, flag_file); 
+                }
+                if(S_ISDIR(argbuf.st_mode)) {
+                    printf("%s:\n", arg); 
+                    print_args(arg, "NULL", flag_all, flag_long, flag_file); 
+                }
+                flag_file = 0;
+                if(optind < argc-1) {
+                    printf("\n"); 
+                }
+                if(flag_long == 0) {
+                    printf("\n");
+                }
+            }
+            optind ++; 
+        }    
+    }
 }
 
-int
-main(int argc, char **argv) {
+//function to print file/directory data with ls option -l
+void print_long(char *dir_arg, struct dirent *dir_entry) {
+    struct stat statbuf; 
+    char fp[PATH_MAX];
+    sprintf(fp, "%s/%s", dir_arg, dir_entry->d_name);
+    if(stat(fp, &statbuf) == -1) {
+        perror("stat");
+        return;   
+    }
 
-	DIR *dp;
-	struct dirent *dirp;
+    //permission data/nlink 
+    printf((S_ISDIR(statbuf.st_mode)) ? "d" : "-"); 
+    printf((statbuf.st_mode & S_IRUSR) ? "r" : "-");
+    printf((statbuf.st_mode & S_IWUSR) ? "w" : "-");
+    printf((statbuf.st_mode & S_IXUSR) ? "x" : "-");
+    printf((statbuf.st_mode & S_IRGRP) ? "r" : "-");
+    printf((statbuf.st_mode & S_IWGRP) ? "w" : "-");
+    printf((statbuf.st_mode & S_IXGRP) ? "x" : "-");
+    printf((statbuf.st_mode & S_IROTH) ? "r" : "-");
+    printf((statbuf.st_mode & S_IWOTH) ? "w" : "-");
+    printf((statbuf.st_mode & S_IXOTH) ? "x " : "- ");
+    printf("%li ", statbuf.st_nlink);
 
-	if (argc != 2) {
-		fprintf(stderr, "usage: %s dir_name\n", argv[0]);
-		exit(EXIT_FAILURE);
-	}
+    //group and user data 
+    struct passwd *pw; 
+    struct group *gid; 
+    pw = getpwuid(statbuf.st_uid);  
+    if(pw == NULL) {
+        perror("getpwuid"); 
+        printf("%d ", statbuf.st_uid); 
+    }else {
+        printf("%s ", pw->pw_name); 
+    }
+    gid = getgrgid(statbuf.st_gid);
+    if(gid == NULL) {
+        perror("getpwuid"); 
+        printf("%d ", statbuf.st_gid); 
+    }else  {
+        printf("%s ", gid->gr_name); 
+    }
 
-	if ((dp = opendir(argv[1])) == NULL) {
-		fprintf(stderr, "can't open '%s'\n", argv[1]);
-		exit(EXIT_FAILURE);
-	}
+    //file size
+    printf("%5ld ", statbuf.st_size);
 
-	if (chdir(argv[1]) == -1) {
-		fprintf(stderr, "can't chdir to '%s': %s\n", argv[1], strerror(errno));
-		exit(EXIT_FAILURE);
-	}
+    //timestamp
+    struct tm *tmp;
+    char outstr[200];
+    time_t t = statbuf.st_mtime;
+    tmp = localtime(&t);   
+    if(tmp == NULL) {
+        perror("localtime"); 
+        exit(EXIT_FAILURE);
+    } 
+    strftime(outstr, sizeof(outstr), "%b %d %R", tmp); 
+    printf("%s ", outstr);
 
-	while ((dirp = readdir(dp)) != NULL) {
-		struct stat sb;
-		char *statType;
-
-		printf("%s: ", dirp->d_name);
-		if (stat(dirp->d_name, &sb) == -1) {
-			fprintf(stderr, "Can't stat %s: %s\n", dirp->d_name,
-						strerror(errno));
-			statType = "unknown";
-		} else {
-			statType = getType(sb);
-		}
-
-		if (lstat(dirp->d_name, &sb) == -1) {
-			fprintf(stderr,"Can't lstat %s: %s\n", dirp->d_name,
-						strerror(errno));
-			continue;
-		} else if (S_ISLNK(sb.st_mode)) {
-			printf("symlink to ");
-		}
-		printf("%s\n", statType);
-	}
-
-	(void)closedir(dp);
-	return EXIT_SUCCESS;
+    //file name 
+    printf("%s\n", dir_entry->d_name); 
 }
+
+//function to check flags and print file/directory info accordingly
+void flag_handler(char *dir_arg, struct dirent *dir_entry, int flag_all, int flag_long) {
+    if(flag_all == 0){
+        if((dir_entry->d_name[0] == '.')) { 
+            return; 
+        } 
+    }
+    if(flag_long == 0) {
+        printf("%s ", dir_entry->d_name);
+    }else { 
+        print_long(dir_arg, dir_entry);
+    }
+}
+
+//function to handle cmd-line args
+void print_args(char *dir_arg, char *file, int flag_all, int flag_long, int flag_file) {
+    //open directory
+    DIR *dir = opendir(dir_arg);
+    if(dir == NULL) {
+        perror("opendir"); 
+        exit(EXIT_FAILURE);
+    } 
+
+    //read and print directory/file data 
+    struct dirent *dir_entry;  
+    errno = 0; 
+    while((dir_entry = readdir(dir))!= NULL) { 
+        if(flag_file == 1) {
+            if(strcmp(dir_entry->d_name, file) == 0) {
+                flag_handler(dir_arg, dir_entry, flag_all, flag_long);
+            }
+        }else {
+            flag_handler(dir_arg, dir_entry, flag_all, flag_long); 
+        }
+    }
+    if((dir_entry == NULL) && (errno != 0)) {
+        perror("readdir");
+        exit(EXIT_FAILURE); 
+    }
+    
+    //close directory
+    closedir(dir);
+}
+
